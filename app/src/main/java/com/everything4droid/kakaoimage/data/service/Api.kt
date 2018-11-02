@@ -1,6 +1,7 @@
 package com.everything4droid.kakaoimage.data.service
 
 import com.everything4droid.kakaoimage.data.response.ImageResponse
+import io.reactivex.Single
 import kotlinx.coroutines.experimental.Deferred
 import retrofit2.http.GET
 import retrofit2.http.Headers
@@ -12,9 +13,9 @@ import retrofit2.http.Query
 interface Api {
 
     @GET("/v2/search/image")
-    fun searchImage(
+    fun searchImageRx(
         @Query("query") keyword: String,
         @Query("page") page: Int
-    ): Deferred<ImageResponse>
+    ): Single<ImageResponse>
 
 }

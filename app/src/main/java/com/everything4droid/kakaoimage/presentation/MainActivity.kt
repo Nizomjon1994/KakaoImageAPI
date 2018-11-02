@@ -20,19 +20,28 @@ import com.everything4droid.kakaoimage.data.util.ERROR_STATUS
 import com.everything4droid.kakaoimage.data.util.EndlessRecyclerOnScrollListener
 import com.everything4droid.kakaoimage.data.util.ErrorKit
 import com.google.gson.Gson
+import dagger.android.AndroidInjection
 import kotlinx.android.synthetic.main.activity_main.*
 import java.util.*
+import javax.inject.Inject
 
 
 class MainActivity : AppCompatActivity() {
 
+    @Inject
+    lateinit var vmFactory: SearchImageVMF
     lateinit var vm: SearchImageVM
-    private val vmFactory by inject<SearchImageVMF>()
+
 
     lateinit var endlessRecyclerScrollListener: EndlessRecyclerOnScrollListener
 
     lateinit var imageAdapter: ImageAdapter
     override fun onCreate(savedInstanceState: Bundle?) {
+
+        // inject
+        AndroidInjection.inject(this)
+
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 

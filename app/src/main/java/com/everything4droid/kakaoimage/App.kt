@@ -1,43 +1,40 @@
 package com.everything4droid.kakaoimage
 
+import android.app.Activity
 import android.app.Application
-import com.everything4droid.kakaoimage.data.datasourse.KakaoDataSource
-import com.everything4droid.kakaoimage.data.repository.SearchImageRepository
-import com.everything4droid.kakaoimage.data.service.Api
-import com.everything4droid.kakaoimage.data.service.ApiCreator
-import com.everything4droid.kakaoimage.data.util.CoroutinesContextProvider
-import com.everything4droid.kakaoimage.domain.SearchImageUseCase
-import com.everything4droid.kakaoimage.mvvm.SearchImageVM
-import com.everything4droid.kakaoimage.mvvm.SearchImageVMF
+import com.everything4droid.kakaoimage.presentation.di.component.AppComponent
+import com.everything4droid.kakaoimage.presentation.di.component.DaggerAppComponent
 import com.facebook.drawee.backends.pipeline.Fresco
-import org.koin.android.architecture.ext.viewModel
-import org.koin.android.ext.android.startKoin
+import dagger.android.AndroidInjector
+import dagger.android.DispatchingAndroidInjector
+import dagger.android.HasActivityInjector
+import javax.inject.Inject
 
 /**
  * Created by Khajiev Nizomjon on 29/10/2018.
  */
-class App : Application() {
+class App : Application(),HasActivityInjector {
 
-    private val module = org.koin.dsl.module.applicationContext {
+    @Inject
+    lateinit var dispatchingAndroidInjector: DispatchingAndroidInjector<Activity>
 
-        bean { ApiCreator.get(Api::class.java) }
-        bean { CoroutinesContextProvider() }
+    private val applicationComponent: AppComponent by lazy {
+        DaggerAppComponent.builder()
+            .application(this)
+            .build()
+    }
 
-        bean { KakaoDataSource(get()) }
-
-        bean { SearchImageRepository(get()) }
-
-        bean { SearchImageUseCase(get()) }
-
-        bean { SearchImageVMF(get(), get()) }
-        viewModel { SearchImageVM(get(), get()) }
-
-
+    fun inject() {
+        applicationComponent.inject(this)
     }
 
     override fun onCreate() {
         super.onCreate()
-        startKoin(this, listOf(module))
+        inject()
         Fresco.initialize(this)
+    }
+
+    override fun activityInjector(): AndroidInjector<Activity> {
+        return dispatchingAndroidInjector
     }
 }

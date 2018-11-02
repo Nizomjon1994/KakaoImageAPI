@@ -3,27 +3,21 @@ package com.everything4droid.kakaoimage.mvvm
 import android.arch.lifecycle.LiveData
 import android.arch.lifecycle.MutableLiveData
 import android.arch.lifecycle.ViewModel
-import com.everything4droid.kakaoimage.R
 import com.everything4droid.kakaoimage.data.entity.Image
+import com.everything4droid.kakaoimage.data.entity.ImageRequestBody
+import com.everything4droid.kakaoimage.data.response.ImageResponse
 import com.everything4droid.kakaoimage.data.response.Result
-import com.everything4droid.kakaoimage.data.util.CoroutinesContextProvider
+import com.everything4droid.kakaoimage.data.util.DefaultSingleObserver
 import com.everything4droid.kakaoimage.data.util.ErrorKit
 import com.everything4droid.kakaoimage.domain.SearchImageUseCase
 import kotlinx.coroutines.experimental.*
-import kotlinx.coroutines.experimental.android.Main
-import kotlin.coroutines.experimental.CoroutineContext
 
 /**
  * Created by Khajiev Nizomjon on 29/10/2018.
  */
 class SearchImageVM(
-    private val searchImageUseCase: SearchImageUseCase,
-    private val coroutinesContextProvider: CoroutinesContextProvider
+    private val searchImageUseCase: SearchImageUseCase
 ) : ViewModel() {
-
-    private val parentJob = Job()
-    private val scope = CoroutineScope(coroutinesContextProvider.main + parentJob)
-    private var searchJob: Job? = null
 
     var pageCounter = 0
     var isEnd = false
@@ -55,34 +49,42 @@ class SearchImageVM(
         pageCounter++
         if (!isEnd) {
             _isSearching.postValue(true)
-            searchJob = launchSearch(keyword)
+            launchSearchRx(keyword)
         }
     }
 
+    private fun launchSearchRx(keyword: String) {
+        val imageRequestBody = ImageRequestBody(keyword, pageCounter)
+        searchImageUseCase.execute(SearchImageObserver(), imageRequestBody)
+    }
 
-    private fun launchSearch(keyword: String): Job {
-        return scope.launch(coroutinesContextProvider.io) {
-            val result = searchImageUseCase(keyword, pageCounter)
-            withContext(coroutinesContextProvider.main) {
-                _isSearching.value = false
-                when (result) {
+    inner class SearchImageObserver : DefaultSingleObserver<Result<ImageResponse>>() {
+        override fun onSuccess(model: Result<ImageResponse>) {
+            super.onSuccess(model)
+            _isSearching.value = false
+            when (model) {
 
-                    is Result.Success -> {
-                        val image = result.data
-                        if (!image.isEmpty()) {
-                            _isEmpty.value = false
-                            isEnd = image.isEnd()
-                            emitUiState(image.imageList)
-                        } else {
-                            _isEmpty.value = true
-                        }
+                is Result.Success -> {
+                    val image = model.data
+                    if (!image.isEmpty()) {
+                        _isEmpty.value = false
+                        isEnd = image.isEnd()
+                        emitUiState(image.imageList)
+                    } else {
+                        _isEmpty.value = true
                     }
-                    is Result.Error -> {
-                        _isError.value = result.exception as ErrorKit?
-                    }
+                }
+                is Result.Error -> {
+                    _isError.value = model.exception as ErrorKit?
                 }
             }
         }
+
+        override fun onError(error: Throwable) {
+            super.onError(error)
+            _isSearching.value = false
+        }
+
     }
 
     private fun emitUiState(image: List<Image>? = null) {
@@ -92,6 +94,6 @@ class SearchImageVM(
 
     override fun onCleared() {
         super.onCleared()
-        parentJob.cancel()
+        searchImageUseCase.dispose()
     }
 }
